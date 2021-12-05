@@ -8,60 +8,60 @@
 #include "pch.hpp"
 #include "eventDispatcher.hpp"
 
-#include <sys/eventfd.h>
+#if __has_include(<sys/eventfd.h>)
+#   include <sys/eventfd.h>
+#endif
 
 #include <qpa/qwindowsysteminterface.h>
-#include <QtGui/qpa/qplatformintegration.h>
-#include <QtWidgets/private/qapplication_p.h>
 
+#ifdef __unix__
+#   include <QtGui/qpa/qplatformintegration.h>
+#   include <QtWidgets/private/qapplication_p.h>
 QT_BEGIN_NAMESPACE
 
-//хак для активации процессора событий XCB
-class QXcbConnection//Stub
-{
-public:
-    void DCI_INTEGRATION_APIDECL_IMPORT processXcbEvents(QEventLoop::ProcessEventsFlags flags);
-};
+    //хак для активации процессора событий XCB
+    class QXcbConnection//Stub
+    {
+    public:
+        void DCI_INTEGRATION_APIDECL_IMPORT processXcbEvents(QEventLoop::ProcessEventsFlags flags);
+    };
 
-struct Stub1 {virtual ~Stub1();};
-struct Stub2 {virtual ~Stub2();};
+    struct Stub1 {virtual ~Stub1();};
+    struct Stub2 {virtual ~Stub2();};
 
-struct QXcbIntegrationStub : public QPlatformIntegration
-#ifndef QT_NO_OPENGL
-    , public Stub1
-# if QT_CONFIG(egl)
-    , public Stub2
-# endif
-#endif
-{
-    QXcbConnection *connection() const { return m_connection; }
+    struct QXcbIntegrationStub : public QPlatformIntegration
+    #ifndef QT_NO_OPENGL
+        , public Stub1
+    # if QT_CONFIG(egl)
+        , public Stub2
+    # endif
+    #endif
+    {
+        QXcbConnection *connection() const { return m_connection; }
 
-    QXcbConnection * m_connection;
-};
-
+        QXcbConnection * m_connection;
+    };
 QT_END_NAMESPACE
+#endif
 
 namespace dci::qml
 {
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     EventDispatcher::EventDispatcher()
-        : _awakerEfd{
-                   eventfd(1, EFD_NONBLOCK|EFD_CLOEXEC),
-                   [this](int fd, std::uint_fast32_t /*readyState*/)
-                   {
-                            eventfd_t value;
-                            eventfd_read(fd, &value);
-                            _awaker.raise();
-                   }}
-        , _sockets{this}
+        : _sockets{this}
         , _timers{this}
     {
+        _awaker.woken() += _awakeOwner * [this]
+        {
+            _readyNotifier.raise();
+        };
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     EventDispatcher::~EventDispatcher()
     {
+        _awakeOwner.flush();
         _sockets.closingDown();
         _timers.closingDown();
     }
@@ -69,15 +69,16 @@ namespace dci::qml
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void EventDispatcher::socketsReady()
     {
-        _awaker.raise();
+        _readyNotifier.raise();
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void EventDispatcher::timersReady()
     {
-        _awaker.raise();
+        _readyNotifier.raise();
     }
 
+#ifdef __unix__
     namespace
     {
         //хак для активации процессора событий XCB
@@ -90,12 +91,15 @@ namespace dci::qml
             }
         }
     }
+#endif
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     bool EventDispatcher::processEvents(QEventLoop::ProcessEventsFlags flags)
     {
+#ifdef __unix__
         //хак для активации процессора событий XCB
         static bool isXcb = "xcb" == QApplication::platformName();
+#endif
 
         bool res = false;
 
@@ -127,11 +131,13 @@ namespace dci::qml
                         localRes |= _sockets.sendEvents();
                     }
 
+#ifdef __unix__
                     //хак для активации процессора событий XCB
                     if(isXcb)
                     {
                         processXcb(flags);
                     }
+#endif
 
                     localRes |= QWindowSystemInterface::sendWindowSystemEvents(flags);
 
@@ -144,7 +150,7 @@ namespace dci::qml
                 try
                 {
                     emit aboutToBlock();
-                    _awaker.wait();
+                    _readyNotifier.wait();
                     emit awake();
                 }
                 catch(const cmt::task::Stop&)
@@ -221,14 +227,14 @@ namespace dci::qml
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void EventDispatcher::wakeUp()
     {
-        eventfd_write(_awakerEfd, 1);
+        _awaker.wakeup();
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void EventDispatcher::interrupt()
     {
         _interrupt.store(true);
-        eventfd_write(_awakerEfd, 1);
+        wakeUp();
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
@@ -251,14 +257,5 @@ namespace dci::qml
         _timers.closingDown();
 
         QAbstractEventDispatcher::closingDown();
-    }
-
-    /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
-    void EventDispatcher::awakerCb(void* cbData, int fd, std::uint_fast32_t /*readyState*/)
-    {
-        eventfd_t value;
-        eventfd_read(fd, &value);
-
-        static_cast<EventDispatcher*>(cbData)->_awaker.raise();
     }
 }

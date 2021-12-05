@@ -21,6 +21,7 @@
 #include <QtCore>
 #include <QtWidgets>
 #include <QtQml>
+#undef interface
 
 #include <dci/poll.hpp>
 #include <dci/exception.hpp>

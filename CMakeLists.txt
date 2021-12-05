@@ -22,13 +22,19 @@ target_link_libraries(${UNAME} PRIVATE
     sbs
     utils
     poll
+    logger
     Qt6::Quick
-    Qt6::Widgets
-    Qt6::XcbQpaPrivate)
+    Qt6::Widgets)
 
-find_package(Qt6 COMPONENTS Core Quick Widgets XcbQpaPrivate REQUIRED)
-#set_property(DIRECTORY PROPERTY Qt6Core_VERSION_MAJOR ${Qt6Core_VERSION_MAJOR})
-#set_property(DIRECTORY PROPERTY Qt6Core_VERSION_MINOR ${Qt6Core_VERSION_MINOR})
+
+if(WIN32)
+    set(needQtComponents)
+else()
+    set(needQtComponents XcbQpaPrivate)
+    target_link_libraries(${UNAME} PRIVATE Qt6::XcbQpaPrivate)
+endif()
+
+find_package(Qt6 COMPONENTS Core Quick Widgets ${needQtComponents} REQUIRED)
 get_target_property(QT_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
 
 ############################################################
@@ -64,9 +70,6 @@ set_target_properties(${UNAME} PROPERTIES AUTOMOC On)
 set_target_properties(${UNAME} PROPERTIES AUTORCC On)
 set_target_properties(${UNAME} PROPERTIES AUTOUIC On)
 
-#set_target_properties(${UNAME} PROPERTIES Qt6Core_VERSION_MAJOR ${Qt6Core_VERSION_MAJOR})
-#set_target_properties(${UNAME} PROPERTIES Qt6Core_VERSION_MINOR ${Qt6Core_VERSION_MINOR})
-
 ############################################################
 dciIntegrationMeta(UNIT ${UNAME} TARGET ${UNAME} RESOURCE_FILE ${CMAKE_CURRENT_SOURCE_DIR}/resources/qt.conf bin/qt.conf)
 
@@ -87,7 +90,6 @@ dciIntegrationMeta(DEPEND ${UNAME}-open-sans)
 dciIntegrationMeta(UNIT ${UNAME} TARGET ${UNAME} RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/open-sans lib/fonts)
 
 ############################################################
-include(GetPrerequisites)
 function(addResourceFiles srcPrefix dstPrefix)
     dciIntegrationMeta(UNIT ${UNAME} DIR_MAPPING ${srcPrefix} ${dstPrefix})
     foreach(abs ${ARGN})

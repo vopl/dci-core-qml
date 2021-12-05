@@ -40,17 +40,17 @@ namespace dci::qml::eventDispatcher
         EventDispatcher* _ed{};
         struct State
         {
-            Sockets *                   _ss;
-            poll::Descriptor            _descriptor;
-            std::uint_fast32_t          _flags {};
+            Sockets *                           _ss;
+            poll::Descriptor                    _descriptor;
+            poll::descriptor::ReadyStateFlags   _readyState {};
 
             std::set<QSocketNotifier *> _notifiers;
 
-            State(Sockets* ss, int fd);
-            void callback(int fd, std::uint_fast32_t flags);
+            State(Sockets* ss, poll::descriptor::Native native);
+            void callback(poll::descriptor::Native native, poll::descriptor::ReadyStateFlags readyState);
         };
 
-        using States = std::map<int, State>;
+        using States = std::map<poll::descriptor::Native, State>;
         States _states;
 
         std::set<QSocketNotifier*>   _readyNotifiers;

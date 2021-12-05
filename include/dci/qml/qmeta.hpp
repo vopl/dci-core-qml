@@ -24,7 +24,7 @@ QT_BEGIN_NAMESPACE
         {
             if constexpr (std::is_default_constructible_v<Proxy>)
             {
-                return [](const QMetaTypeInterface*, void* addr) { new (addr) T(); };
+                return [](const QMetaTypeInterface*, void* addr) { new (addr) T{}; };
             }
             else
             {

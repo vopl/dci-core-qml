@@ -50,12 +50,10 @@ namespace dci::qml
         void closingDown() override;
 
     private:
-        static void awakerCb(void* cbData, int fd, std::uint_fast32_t /*readyState*/);
-
-    private:
         std::atomic_bool    _interrupt{};
-        poll::Descriptor    _awakerEfd;
-        cmt::Notifier       _awaker;
+        cmt::Notifier       _readyNotifier;
+        sbs::Owner          _awakeOwner;
+        poll::Awaker        _awaker;
 
     private:
         eventDispatcher::Sockets    _sockets;

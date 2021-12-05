@@ -26,10 +26,10 @@ namespace dci::qml::eventDispatcher
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void Sockets::registerSocketNotifier(QSocketNotifier* notifier)
     {
-        int fd = static_cast<int>(notifier->socket());
+        poll::descriptor::Native native{notifier->socket()};
         State& s = _states.try_emplace(
-                       fd,
-                       this, fd).first->second;
+                       native,
+                       this, native).first->second;
 
         s._notifiers.insert(notifier);
     }
@@ -37,9 +37,9 @@ namespace dci::qml::eventDispatcher
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
     void Sockets::unregisterSocketNotifier(QSocketNotifier* notifier)
     {
-        int fd = static_cast<int>(notifier->socket());
+        poll::descriptor::Native native{notifier->socket()};
 
-        auto iter = _states.find(fd);
+        auto iter = _states.find(native);
         if(_states.end() == iter)
         {
             return;
@@ -106,47 +106,47 @@ namespace dci::qml::eventDispatcher
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
-    Sockets::State::State(Sockets* ss, int fd)
+    Sockets::State::State(Sockets* ss, poll::descriptor::Native native)
         : _ss{ss}
-        , _descriptor{fd, [this](int fd, std::uint_fast32_t readyState){callback(fd, readyState);}}
+        , _descriptor{native, [this](poll::descriptor::Native native, poll::descriptor::ReadyStateFlags readyState){callback(native, readyState);}}
     {
     }
 
     /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
-    void Sockets::State::callback(int fd, std::uint_fast32_t flags)
+    void Sockets::State::callback(poll::descriptor::Native native, poll::descriptor::ReadyStateFlags readyState)
     {
-        (void)fd;
+        (void)native;
 
-        dbgAssert(_descriptor.fd() == fd);
+        dbgAssert(_descriptor.native() == native);
 
-        _flags |= flags;
+        _readyState |= readyState;
 
-        std::uint_fast32_t errMask = poll::Descriptor::rsf_error | poll::Descriptor::rsf_close | poll::Descriptor::rsf_eof;
+        std::uint_fast32_t errMask = poll::descriptor::rsf_error | poll::descriptor::rsf_close | poll::descriptor::rsf_eof;
 
         for(QSocketNotifier* qsn : _notifiers)
         {
             switch(qsn->type())
             {
             case QSocketNotifier::Read:
-                if(_flags & (errMask | poll::Descriptor::rsf_read))
+                if(_readyState & (errMask | poll::descriptor::rsf_read))
                 {
-                    _flags &= ~poll::Descriptor::rsf_read;
+                    _readyState &= ~poll::descriptor::rsf_read;
                     _ss->ready(qsn);
                 }
                 break;
 
             case QSocketNotifier::Write:
-                if(_flags & (errMask | poll::Descriptor::rsf_write))
+                if(_readyState & (errMask | poll::descriptor::rsf_write))
                 {
-                    _flags &= ~poll::Descriptor::rsf_write;
+                    _readyState &= ~poll::descriptor::rsf_write;
                     _ss->ready(qsn);
                 }
                 break;
 
             case QSocketNotifier::Exception:
-                if(_flags & (errMask | poll::Descriptor::rsf_pri))
+                if(_readyState & (errMask | poll::descriptor::rsf_pri))
                 {
-                    _flags &= ~poll::Descriptor::rsf_pri;
+                    _readyState &= ~poll::descriptor::rsf_pri;
                     _ss->ready(qsn);
                 }
                 break;
