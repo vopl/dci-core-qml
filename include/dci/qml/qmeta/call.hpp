@@ -116,11 +116,7 @@ namespace dci::qml::qmeta
             case QMetaObject::WriteProperty:
                 activate<Props, Write>(id, o, a);
                 break;
-            case QMetaObject::ResetProperty:
-            case QMetaObject::BindableProperty:
-            case QMetaObject::IndexOfMethod:
-            case QMetaObject::RegisterPropertyMetaType:
-            case QMetaObject::RegisterMethodArgumentMetaType:
+            default:
                 dbgFatal("not impl");
                 break;
             }
