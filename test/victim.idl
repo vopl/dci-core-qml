@@ -28,11 +28,11 @@ scope a::b::c
     interface I1
     {
         in m0(int32);
-        in m1(int32 param1, string param2) -> void;
+        in m1(int32 param1, string param2) -> none;
         in m2(array<int32, 2> param3, uint8, S1) -> string;
 
         out s0(int32);
-        out s1(int32 param1, string param2) -> void;
+        out s1(int32 param1, string param2) -> none;
         out s2(array<int32, 2> param3, uint8, S1) -> string;
     }
 }
