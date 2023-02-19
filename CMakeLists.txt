@@ -77,6 +77,7 @@ dciIntegrationMeta(UNIT ${UNAME} TARGET ${UNAME} RESOURCE_FILE ${CMAKE_CURRENT_S
 include(ExternalProject)
 ExternalProject_Add(${UNAME}-open-sans
     EXCLUDE_FROM_ALL On
+    DOWNLOAD_EXTRACT_TIMESTAMP On
     URL http://www.opensans.com/download/open-sans.zip
     URL_HASH SHA256=36bf1f3d470840208e0e617a6bad793111c7f535cd4339e07618aaf4c179fd0c
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/open-sans-src

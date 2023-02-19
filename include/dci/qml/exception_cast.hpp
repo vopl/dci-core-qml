@@ -8,6 +8,7 @@
 #pragma once
 
 #include "api.hpp"
+#include <dci/utils/dbg.hpp>
 
 namespace dci::qml
 {

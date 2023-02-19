@@ -25,10 +25,15 @@ namespace
 
         uint ofs = qt[idx*2+0];
         uint len = qt[idx*2+1];
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overread"
         const char* csz = reinterpret_cast<const char*>(qt) + ofs;
         EXPECT_EQ(csz, sd::getStr(idx));
         EXPECT_EQ(len, sd::getLen(idx));
         EXPECT_EQ(strlen(csz), len);
+#pragma GCC diagnostic pop
+
         EXPECT_EQ(name.size()-1, len);
         EXPECT_EQ(0, strncmp(csz, name.data(), len));
     }

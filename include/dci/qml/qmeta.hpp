@@ -11,6 +11,22 @@
 #include "qmeta/proxyProvider.hpp"
 #include "qmeta/object.hpp"
 
+
+/////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
+QT_BEGIN_NAMESPACE
+    template<class T>
+    requires (dci::qml::qmeta::Def<T>::_declared)
+    struct QtPrivate::QMetaTypeTypeFlags<T>
+    {
+        enum
+        {
+            Flags = QMetaType::NeedsConstruction |
+                    QMetaType::NeedsDestruction |
+                    QMetaType::IsGadget
+        };
+    };
+QT_END_NAMESPACE
+
 /////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
 QT_BEGIN_NAMESPACE
     template<typename T>
@@ -20,6 +36,8 @@ QT_BEGIN_NAMESPACE
         using Proxy = typename dci::qml::qmeta::ProxyProvider<T>::Result;
 
     public:
+        static constexpr unsigned Flags = QMetaTypeTypeFlags<T>::Flags;
+
         static constexpr QMetaTypeInterface::DefaultCtrFn getDefaultCtr()
         {
             if constexpr (std::is_default_constructible_v<Proxy>)
@@ -103,21 +121,6 @@ QT_BEGIN_NAMESPACE
         {
             return value();
         }
-    };
-QT_END_NAMESPACE
-
-/////////0/////////1/////////2/////////3/////////4/////////5/////////6/////////7
-QT_BEGIN_NAMESPACE
-    template<class T>
-    requires (dci::qml::qmeta::Def<T>::_declared)
-    struct QtPrivate::QMetaTypeTypeFlags<T>
-    {
-        enum
-        {
-            Flags = QMetaType::NeedsConstruction |
-                    QMetaType::NeedsDestruction |
-                    QMetaType::IsGadget
-        };
     };
 QT_END_NAMESPACE
 
